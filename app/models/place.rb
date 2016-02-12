@@ -29,7 +29,7 @@ class Place
     @address_components = []
     params[:address_components].each do |address_component|
       @address_components << AddressComponent.new(address_component)
-    end
+    end unless params[:address_components].nil?
   end
 
   def self.find_by_short_name short_name
@@ -76,5 +76,23 @@ class Place
       { "$match": { types: "country" }},
       { "$group": { _id: "$long_name" }}
     ]).to_a.map {|doc| doc[:_id]}
+  end
+
+  def self.create_indexes
+    self.collection.indexes.create_one("geometry.geolocation": Mongo::Index::GEO2DSPHERE)
+  end
+
+  def self.remove_indexes
+    self.collection.indexes.drop_one("geometry.geolocation_2dsphere")
+  end
+
+  def self.near(point, max_meters=nil)
+    near = { "$geometry": point.to_hash }
+    near[:$maxDistance] = max_meters unless max_meters.nil?
+    self.collection.find("geometry.geolocation": { "$near": near })
+  end
+
+  def near(max_meters=nil)
+    self.class.to_places(self.class.near(@location, max_meters))
   end
 end
