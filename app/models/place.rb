@@ -51,4 +51,30 @@ class Place
     self.class.collection.find(_id: BSON::ObjectId.from_string(@id)).delete_one
   end
 
+  def self.get_address_components(sort=nil, offset=nil, limit=nil)
+    pipeline = [
+        { "$unwind": "$address_components" },
+        { "$project": {
+          address_components: "$address_components",
+          formatted_address: "$formatted_address",
+          "geometry.geolocation": "$geometry.geolocation"
+          }
+        }
+    ]
+    pipeline << { "$sort": sort } unless sort.nil?
+    pipeline << { "$skip": offset } unless offset.nil?
+    pipeline << { "$limit": limit } unless limit.nil?
+
+    self.collection.find.aggregate(pipeline)
+  end
+
+  def self.get_country_names
+    self.collection.find.aggregate([
+      { "$unwind": "$address_components" },
+      { "$project": { long_name: "$address_components.long_name", types: "$address_components.types" }},
+      { "$unwind": "$types" },
+      { "$match": { types: "country" }},
+      { "$group": { _id: "$long_name" }}
+    ]).to_a.map {|doc| doc[:_id]}
+  end
 end
