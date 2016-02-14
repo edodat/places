@@ -84,6 +84,15 @@ class Place
     ]).to_a.map {|doc| doc[:_id]}
   end
 
+  def self.find_ids_by_country_code country_code
+    self.collection.find.aggregate([
+      { "$unwind": "$address_components" },
+      { "$match": {"address_components.short_name": country_code, "address_components.types": "country" } },
+      { "$group": { _id: "$_id" }},
+      { "$project": { _id: 1 }}
+    ]).to_a.map {|doc| doc[:_id].to_s}
+  end
+
   def self.create_indexes
     self.collection.indexes.create_one("geometry.geolocation": Mongo::Index::GEO2DSPHERE)
   end
