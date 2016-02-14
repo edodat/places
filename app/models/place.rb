@@ -95,4 +95,10 @@ class Place
   def near(max_meters=nil)
     self.class.to_places(self.class.near(@location, max_meters))
   end
+
+  def photos(offset=0, limit=nil)
+    result = Photo.find_photos_for_place(@id).skip(offset)
+    result = result.limit(limit) unless limit.nil?
+    return Photo.to_photos(result)
+  end
 end
